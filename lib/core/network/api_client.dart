@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/api_endpoints.dart';
 import '../errors/exceptions.dart';
@@ -111,21 +112,27 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 
   final dio = Dio(baseOptions);
 
-  dio.interceptors.addAll([
+  dio.interceptors.add(
     AuthInterceptor(
       storageService: storageService,
       onUnauthorized: () {
         sessionNotifier.notifySessionExpired();
       },
     ),
-    LogInterceptor(
-      requestBody: false, // Security: avoid printing request body containing credentials in release/logs
-      responseBody: false, // Security: avoid dumping response payloads into console logs
-      requestHeader: false,
-      responseHeader: false,
-      error: true,
-    ),
-  ]);
+  );
+
+  // Only attach LogInterceptor in debug builds to prevent information leakage
+  if (kDebugMode) {
+    dio.interceptors.add(
+      LogInterceptor(
+        requestBody: false,
+        responseBody: false,
+        requestHeader: false,
+        responseHeader: false,
+        error: true,
+      ),
+    );
+  }
 
   return ApiClient(dio: dio);
 });

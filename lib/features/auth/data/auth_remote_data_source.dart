@@ -29,7 +29,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         data: {
           'username': username.trim(),
           'password': password.trim(),
-          'expiresInMins': 60,
+          'expiresInMins': ApiEndpoints.tokenExpiryMins,
         },
       );
 

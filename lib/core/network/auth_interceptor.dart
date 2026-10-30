@@ -81,7 +81,7 @@ class AuthInterceptor extends QueuedInterceptor {
         ApiEndpoints.refresh,
         data: {
           'refreshToken': refreshToken,
-          'expiresInMins': 60,
+          'expiresInMins': ApiEndpoints.tokenExpiryMins,
         },
       );
 

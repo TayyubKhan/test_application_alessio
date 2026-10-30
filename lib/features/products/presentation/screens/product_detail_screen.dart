@@ -20,11 +20,15 @@ class ProductDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (initialProduct != null) {
-      return _ProductDetailContent(product: initialProduct!);
-    }
-
+    // Always watch the network provider for fresh data
     final productAsync = ref.watch(productDetailProvider(productId));
+
+    // Use fresh API data when available, fall back to initialProduct for instant display
+    final resolvedProduct = productAsync.whenOrNull(data: (p) => p) ?? initialProduct;
+
+    if (resolvedProduct != null) {
+      return _ProductDetailContent(product: resolvedProduct);
+    }
 
     return Scaffold(
       appBar: AppBar(

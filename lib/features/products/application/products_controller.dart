@@ -56,7 +56,7 @@ class ProductsController extends StateNotifier<AsyncValue<ProductsState>> {
       if (!state.hasValue) {
         state = AsyncValue.error(e.message, st);
       }
-    } catch (e) {
+    } catch (e, st) {
       if (epoch != _epoch) return;
       if (!state.hasValue) {
         state = AsyncValue.error(e.toString(), st);

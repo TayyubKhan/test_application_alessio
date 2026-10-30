@@ -72,7 +72,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: ':id',
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-              final product = state.extra as ProductEntity?;
+              final product = state.extra is ProductEntity
+                  ? state.extra as ProductEntity
+                  : null;
               return ProductDetailScreen(
                 productId: id,
                 initialProduct: product,
