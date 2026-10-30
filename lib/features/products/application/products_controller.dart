@@ -8,15 +8,18 @@ import 'products_state.dart';
 class ProductsController extends StateNotifier<AsyncValue<ProductsState>> {
   final ProductsRepository _repository;
   static const int _pageSize = 20;
+  int _epoch = 0;
 
   ProductsController({required ProductsRepository repository})
       : _repository = repository,
         super(const AsyncValue.loading());
 
   Future<void> loadInitial() async {
+    final epoch = ++_epoch;
     state = const AsyncValue.loading();
     try {
       final page = await _repository.getProducts(limit: _pageSize, skip: 0);
+      if (epoch != _epoch) return;
       state = AsyncValue.data(
         ProductsState(
           products: page.products,
@@ -26,15 +29,19 @@ class ProductsController extends StateNotifier<AsyncValue<ProductsState>> {
         ),
       );
     } on Failure catch (e, st) {
+      if (epoch != _epoch) return;
       state = AsyncValue.error(e.message, st);
     } catch (e, st) {
+      if (epoch != _epoch) return;
       state = AsyncValue.error(e.toString(), st);
     }
   }
 
   Future<void> refresh() async {
+    final epoch = ++_epoch;
     try {
       final page = await _repository.getProducts(limit: _pageSize, skip: 0);
+      if (epoch != _epoch) return;
       state = AsyncValue.data(
         ProductsState(
           products: page.products,
@@ -44,11 +51,13 @@ class ProductsController extends StateNotifier<AsyncValue<ProductsState>> {
         ),
       );
     } on Failure catch (e, st) {
+      if (epoch != _epoch) return;
       // If refresh fails and we already had data, preserve it or surface error
       if (!state.hasValue) {
         state = AsyncValue.error(e.message, st);
       }
-    } catch (e, st) {
+    } catch (e) {
+      if (epoch != _epoch) return;
       if (!state.hasValue) {
         state = AsyncValue.error(e.toString(), st);
       }
@@ -63,6 +72,8 @@ class ProductsController extends StateNotifier<AsyncValue<ProductsState>> {
       return;
     }
 
+    final epoch = _epoch;
+
     state = AsyncValue.data(
       currentState.copyWith(isLoadingMore: true, paginationError: null),
     );
@@ -74,28 +85,36 @@ class ProductsController extends StateNotifier<AsyncValue<ProductsState>> {
         skip: nextSkip,
       );
 
-      final combined = [...currentState.products, ...page.products];
+      // Discard stale pagination results if a refresh or reload happened while awaiting
+      if (epoch != _epoch) return;
+
+      final latestState = state.valueOrNull ?? currentState;
+      final combined = [...latestState.products, ...page.products];
 
       state = AsyncValue.data(
-        currentState.copyWith(
+        latestState.copyWith(
           products: combined,
           total: page.total,
           skip: page.skip,
-          hasMore: (nextSkip + page.products.length) < page.total,
+          hasMore: (latestState.products.length + page.products.length) < page.total,
           isLoadingMore: false,
           paginationError: null,
         ),
       );
     } on Failure catch (e) {
+      if (epoch != _epoch) return;
+      final latestState = state.valueOrNull ?? currentState;
       state = AsyncValue.data(
-        currentState.copyWith(
+        latestState.copyWith(
           isLoadingMore: false,
           paginationError: e.message,
         ),
       );
     } catch (e) {
+      if (epoch != _epoch) return;
+      final latestState = state.valueOrNull ?? currentState;
       state = AsyncValue.data(
-        currentState.copyWith(
+        latestState.copyWith(
           isLoadingMore: false,
           paginationError: 'Failed to load more products: $e',
         ),
